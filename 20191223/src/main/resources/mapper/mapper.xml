@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mapper">
+
+	
+	<resultMap type="map" id="loginchk">
+		<result column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="pass" property="pass"/>
+		<result column="rank" property="rank"/>
+	</resultMap>
+
+	<resultMap type="map" id="detailmap">
+		<result column="list_seq" property="DSeq"/>
+		<result column="list_subject" property="DSubject"/>
+		<result column="list_content" property="DContent"/>
+		<result column="name" property="DName"/>
+		<result column="list_status" property="DStatus"/>
+		<result column="list_id" property="listId"/>
+	</resultMap>	
+
+	<resultMap type="map" id="historydetailmap">
+		<result column="history_seq" property="HistoryDSeq"/>
+		<result column="history_subseq" property="HistoryDSubject"/>
+		<result column="history_pay_date" property="HistoryPayDate"/>
+		<result column="history_status" property="HistoryStatus"/>
+		<result column="name" property="HDName"/>
+	</resultMap>
+
+	<resultMap type="map" id="listmap">
+		<result column="list_seq" property="listSeq"/>
+		<result column="name" property="listName"/>
+		<result column="list_payment_id" property="listPaymentId"/>
+		<result column="list_content" property="listContent"/>
+		<result column="list_subject" property="listSubject"/>
+		<result column="list_status" property="listStatus"/>
+		<result column="list_reg_date" property="listRegDate"/>
+		<result column="list_payment_date" property="listPaymentDate"/>
+	</resultMap>
+
+	<resultMap type="Integer" id="seq">
+		<result column="seq" property="seq"/>
+	</resultMap>	
+
+	<resultMap type="map" id="proxymap">
+		<result column="proxy_id" property="proxyId"/>
+		<result column="proxy_name" property="proxyName"/>
+		<result column="proxy_rank" property="proxyRank"/>
+		<result column="receive_start_day" property="receiveStartDay"/>
+		<result column="receive_end_date" property="receiveEndDate"/>
+		<result column="receive_id" property="receiveId"/>
+		<result column="receive_name" property="receiveName"/>
+		<result column="receive_rank" property="receiveRank"/>
+	</resultMap>
+
+	<delete id="delete" parameterType="map">
+		DELETE FROM yj_proxy
+		WHERE receive_end_date <![CDATA[ <=]]> sysdate
+	</delete>
+
+	<insert id="proxy4" parameterType="map">
+	INSERT INTO yj_proxy (
+	    proxy_id,
+	    proxy_name,
+	    proxy_rank,
+	    receive_start_day,
+	    receive_end_date,
+	    receive_id,
+	    receive_name,
+	    receive_rank
+	) VALUES (
+	    #{id},
+	    #{name},
+	    #{rank},
+	    SYSDATE,
+	    SYSDATE + (INTERVAL <![CDATA['5']]> DAY),
+	    #{proxy},
+	    #{namel},
+	    #{rankl}
+	)	
+	</insert>
+	
+	<select id="proxyone" parameterType="map" resultMap="proxymap">
+	SELECT
+	    proxy_id,
+	    proxy_name,
+	    proxy_rank,
+	    receive_start_day,
+	    receive_end_date,
+	    receive_id,
+	    receive_name,
+	    receive_rank
+	FROM
+	    yj_proxy
+	WHERE
+	    receive_id=#{id}
+	</select>
+
+	<select id="proxy3" parameterType="map" resultMap="loginchk" >
+		SELECT
+		    id,
+		    name,
+		    pass,
+		    rank
+		FROM
+		    yj_login
+		WHERE 1=1
+		AND id=#{proxy}
+	</select>	
+	
+	<select id="proxy2" parameterType="String" resultType="String" >
+		SELECT
+		    rank
+		FROM
+		    yj_login
+		WHERE 1=1
+		AND id=#{proxyId}
+	</select>	
+
+	<select id="proxylist" resultMap="loginchk" parameterType="map">
+			SELECT
+			    id,
+			    name,
+			    pass,
+			    rank
+			FROM 
+				yj_login
+			WHERE 1=1
+			<choose>
+				<when test="rank=='과장'">
+					AND (RANK = '대리'
+					OR RANK = '사원')
+					AND ID NOT IN 
+					(SELECT                 
+	                	receive_id             
+	                FROM                 
+	                	yj_proxy)
+				</when>
+				<when test="rank=='부장'">
+					AND (RANK = '대리'
+					OR RANK = '사원'
+					OR RANK= '과장')
+					AND ID NOT IN 
+					(SELECT 
+						receive_id  
+					FROM                 
+	                	yj_proxy)
+				</when>			
+			</choose>
+	</select>
+	
+	
+	<select id="seq" resultMap="seq" parameterType="Integer">
+		SELECT
+		    nvl(max(list_seq) ,0)+1 seq
+		FROM
+		    yj_list
+	</select>
+	
+	<select id="seqqq" resultMap="seq" parameterType="Integer">
+		SELECT
+		    nvl(max(list_seq) ,0) seq
+		FROM
+		    yj_list
+		WHERE
+			list_seq=#{seq}
+	</select>
+	
+	<select id="idchk" resultMap="loginchk" parameterType="map">
+		SELECT
+		    id,
+		    name,
+		    pass,
+		    rank
+		FROM
+		    yj_login
+		WHERE
+		    id=#{id}
+	</select>
+
+	<select id="passchk" resultMap="loginchk" parameterType="map">
+		SELECT
+		    id,
+		    name,
+		    pass,
+		    rank
+		FROM
+		    yj_login
+		WHERE
+		    id=#{id}
+		AND
+			pass=#{pass}
+	</select>
+	
+	<select id="list" resultMap="listmap" parameterType="map">
+		SELECT
+		    list_seq
+		    ,b.name
+		    ,(select b.name from yj_login b where b.id=a.list_payment_id) list_payment_id
+		    ,list_content
+		    ,list_subject
+		    ,DECODE(list_status , 'temporarySave', '임시저장' , 'payWaiting','결재대기', 'payIng','결재중','payComplete' , '결제완료', 'back' , '반려' ) list_status
+		    ,list_reg_date
+		    ,list_payment_date
+		FROM
+		    yj_list a , yj_login b
+        WHERE
+            a.list_id = b.id
+		<choose>
+			<when test="searchType=='name'">
+				AND b.name like '%' || #{search} || '%'
+			</when>
+			<when test="searchType=='subject'">
+				AND a.list_subject like '%' || #{search} || '%'
+			</when>
+			<when test="searchType=='paymentname'">
+				AND  (select b.name from yj_login b where b.id=a.list_payment_id) like '%' || #{search} || '%'
+			</when>
+		</choose>
+		<choose>
+			<when test="searchType2=='temporarySave'">
+				AND a.list_status = 'temporarySave'
+			</when>
+			<when test="searchType2=='payWaiting'">
+				AND a.list_status = 'payWaiting'
+			</when>
+			<when test="searchType2=='payIng'">
+				AND a.list_status = 'payIng'
+			</when>
+			<when test="searchType2=='payComplete'">
+				AND a.list_status = 'payComplete'
+			</when>
+			<when test="searchType2=='back'">
+				AND  a.list_status = 'back'
+			</when>
+		</choose>
+		<choose>
+			<when test="rank =='부장'  or proxyRank=='부장'">
+		        AND a.list_id=b.id
+				AND (a.list_id=#{id}
+		        OR a.list_status = 'payIng'
+		        OR a.list_seq in
+		        (SELECT A.history_seq FROM
+				(SELECT
+				 	history_seq,
+				     RANK()OVER (PARTITION BY history_seq ORDER BY history_subseq desc) as rk 
+				FROM
+					yj_history
+				WHERE history_pay_id=#{id}
+				)A 
+				WHERE rk <![CDATA[ <=]]>2)
+				)			
+			</when>
+			<when test="rank =='과장' or proxyRank=='과장'">
+		        AND a.list_id=b.id
+				AND (a.list_id=#{id}
+		        OR a.list_status = 'payWaiting'
+		        OR a.list_seq in
+		        (SELECT A.history_seq FROM
+				(SELECT
+				 	history_seq,
+				     RANK()OVER (PARTITION BY history_seq ORDER BY history_subseq desc) as rk 
+				FROM
+					yj_history
+				WHERE history_pay_id=#{id}
+				)A 
+				WHERE rk <![CDATA[ <=]]>2)
+				)
+			</when>	
+			<when test="rank=='사원' or rank=='대리'">
+				AND b.id=#{id}
+			</when>		
+		</choose>
+	</select>
+	
+	<select id="detail" resultMap="detailmap" parameterType="Integer">
+		SELECT
+		    list_seq,
+	        b.name,
+		    list_subject,
+		    list_content,
+		    list_status,
+		    list_id
+		FROM
+			    yj_list a , yj_login b
+		WHERE 
+			a.list_id = b.id
+	    AND 
+	    	list_seq=#{seq}
+	</select>	
+	
+	
+	
+	<select id="historydetail"  resultMap="historydetailmap" parameterType="map">
+		SELECT
+		    history_seq,
+		    history_subseq,
+		    history_pay_date,
+		    DECODE(history_status, 'temporarySave', '임시저장' , 'payWaiting','결재대기', 'payIng','결재중','payComplete' , '결제완료', 'back' , '반려' ) history_status ,
+            (select b.name from yj_login b where a.history_pay_id = b.id) name
+        FROM
+		    yj_history a , yj_list b
+		WHERE a.history_seq=b.list_seq
+		AND history_seq=#{seq}
+		ORDER BY history_subseq DESC
+	</select>
+	
+	<insert id="save">
+		INSERT INTO yj_list (
+		    list_seq,
+		    list_id,
+		    list_content,
+		    list_subject,
+		    list_status,
+		    list_reg_date
+		) VALUES (
+		    (select nvl(max(list_seq ),0 )+1 from yj_list),
+		    #{id},
+		    #{content},
+		    #{subject},
+		    'temporarySave',
+		    sysdate
+		)
+	</insert>
+
+	<update id="resave" parameterType="map">
+		UPDATE yj_list
+		SET
+			list_id=#{id},
+			list_subject=#{subject},
+			list_content=#{content},
+			list_payment_date=sysdate,
+			list_status='temporarySave' 
+		WHERE 
+			list_seq=#{seq}
+	</update>
+
+	<insert id="historysave">
+		INSERT INTO yj_history (
+		    history_seq,
+		    history_subseq,
+		    history_pay_date,
+		    history_status
+		) VALUES (
+		    #{seq},
+		    (select nvl(max(history_subseq ),0 )+1 from yj_history where history_seq=#{seq}),
+		    sysdate,
+		    'temporarySave'
+		)
+	</insert>
+
+	<insert id="payment" parameterType="map">
+		INSERT INTO yj_list (
+		    list_seq,
+		    list_id,
+		    list_subject,
+		    list_reg_date,
+		    list_payment_date,
+		    list_payment_id,
+		    list_status,
+		    list_content
+		) VALUES (
+		    #{seq},
+		    #{id},
+		    #{subject},
+		    sysdate,
+		    sysdate,
+		    #{id},
+			<choose>
+			   	<when test="rank=='부장 ' or proxyRank=='부장'">
+			    	'payComplete',
+			    </when>	
+			  	<when test="rank=='과장' or proxyRank=='과장'">
+			    	'payIng',
+			    </when>			    		
+			   	<when test="rank=='사원' or rank=='대리'">
+			   		'payWaiting',
+			    </when>
+			 </choose>
+			#{content}
+		)
+	</insert>
+	
+	<update id="repayment" parameterType="map">
+		UPDATE yj_list
+		SET
+		    list_payment_date=sysdate,
+		    list_payment_id=#{id},
+		    <choose>
+		    	<when test="rank=='부장' or proxyRank=='부장'">
+			    	list_status='payComplete'
+			    </when>	
+		    	<when test="rank=='과장' or proxyRank=='과장'">
+			    	list_status='payIng'
+			    </when>			    	    
+		    	<when test="rank=='사원' or rank=='대리'">
+					list_status='payWaiting'
+			    </when>
+		    </choose>
+		WHERE
+		    list_seq =#{seq}
+	</update>
+	
+	<insert id="historypayment" parameterType="map">
+		INSERT INTO yj_history (
+		    history_seq,
+		    history_subseq,
+		    history_pay_date,
+		    history_status,
+		    history_pay_id
+		) VALUES (
+		    #{seq},
+		   (select nvl(max(history_subseq) , 0)+1 from yj_history  where history_seq=#{seq}),
+		   sysdate,
+		   <choose>
+		       <when test="rank=='부장' or proxyRank=='부장'">
+		            'payComplete',
+		       </when>
+		       <when test="rank=='과장' or proxyRank=='과장'">
+		            'payIng',
+		       </when>		       		   
+		       <when test="rank=='사원' or rank=='대리'">
+		            'payWaiting',
+		       </when>
+		   </choose>
+		    #{id}
+		)	
+	</insert>
+	
+	<update id="back" parameterType="map">
+		UPDATE yj_list
+		SET
+		   list_status = 'back',
+		   list_payment_id = #{id},
+		   list_payment_date =sysdate
+		WHERE 
+			list_seq=#{seq}
+	</update>	
+	
+	<insert id="historyback" parameterType="map">
+		INSERT INTO yj_history (
+		    history_seq,
+		    history_subseq,
+		    history_pay_date,
+		    history_status,
+		    history_pay_id
+		) VALUES (
+		    #{seq},
+		    (select nvl(max(history_subseq) , 0)+1 from yj_history  where history_seq=#{seq}),
+		    sysdate,
+		    'back',
+		     #{id}
+		)
+	</insert>
+
+	<insert id="sing" parameterType="map">
+	INSERT INTO yj_login (
+	    id,
+	    pass,
+	    name,
+	    rank
+	) VALUES (
+	    #{id},
+	    #{pass},
+	    #{name},
+	    #{rank}
+	)
+	</insert>
+
+
+</mapper>
