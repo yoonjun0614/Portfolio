@@ -9,17 +9,18 @@
 <title>Insert title here</title>
 <script src="/resources/js/jquery-3.4.1.min.js"></script>
 <script>
-
 	
-	function fncback(a){
-		
-		$("#saveFrm").attr("action","back").attr("method","post").submit();
-		
-	} 	
 	
 	
 	$(function () {
 
+
+		$("#backBtn").click(function(){
+				
+			$("#saveFrm").attr("action","back").attr("method","post").submit();
+
+		})			
+		
 		
 		$("#temporarySaveBtn").click(function(){
 			
